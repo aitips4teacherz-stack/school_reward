@@ -26,6 +26,7 @@ export default function Layout() {
           <NavLink to="/battle">Battle</NavLink>
           <NavLink to="/leaderboard">Leaderboard</NavLink>
           {['teacher', 'admin'].includes(profile?.role) && <NavLink to="/teacher">Teacher</NavLink>}
+          {profile?.role === 'admin' && <NavLink to="/admin">Admin</NavLink>}
         </nav>
         <button className="ghost-button" onClick={handleSignOut}>Sign out</button>
       </aside>

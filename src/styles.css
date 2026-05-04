@@ -95,6 +95,7 @@ input, select {
 .primary-button { background: var(--primary); color: white; }
 .primary-button:hover { background: var(--primary-dark); }
 .ghost-button { background: #eef2f7; color: var(--ink); }
+.full-width { width: 100%; margin-top: 14px; }
 .sidebar .ghost-button { margin-top: auto; background: rgba(255,255,255,0.1); color: white; }
 .success { color: var(--green); font-weight: 700; }
 .error { color: var(--red); font-weight: 700; }
@@ -237,6 +238,38 @@ input, select {
 .segmented { display: flex; background: #e8edf5; padding: 4px; border-radius: 8px; }
 .segmented button { background: transparent; }
 .segmented button.active { background: white; color: var(--primary); }
+.login-tabs { margin-bottom: 18px; }
+.login-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+.account-form { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); align-items: end; }
+.pin-display {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  text-align: center;
+  font-size: 1.7rem;
+  letter-spacing: 0;
+  background: #f8fafc;
+}
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.keypad button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  min-height: 48px;
+  background: white;
+  font-weight: 900;
+}
+.inline-edit { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+.check-row input { width: auto; }
 
 .battle-board { display: grid; grid-template-columns: 1fr 80px 1fr; align-items: center; gap: 16px; }
 .versus { text-align: center; font-weight: 900; color: var(--muted); }
@@ -282,4 +315,5 @@ input, select {
   .versus { display: none; }
   .leader-row { grid-template-columns: 42px 1fr; }
   .leader-row span:not(.rank) { justify-self: start; }
+  .login-grid { grid-template-columns: 1fr; }
 }

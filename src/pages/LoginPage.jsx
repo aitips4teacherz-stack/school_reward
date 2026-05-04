@@ -1,25 +1,48 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { signInWithMagicLink } from '../lib/api';
+import { bootstrapAdmin, signInWithUsername } from '../lib/api';
 import { useAuth } from '../lib/AuthContext.jsx';
+
+const roleLabels = {
+  admin: 'Admin',
+  teacher: 'Teacher',
+  student: 'Student',
+};
 
 export default function LoginPage() {
   const { user } = useAuth();
-  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('student');
+  const [form, setForm] = useState({ username: '', password: '' });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [bootstrapping, setBootstrapping] = useState(false);
 
   if (user) return <Navigate to="/" replace />;
 
-  async function handleSubmit(event) {
+  async function handleLogin(event) {
     event.preventDefault();
     setError('');
     setMessage('');
     try {
-      await signInWithMagicLink(email);
-      setMessage('Check your email for the magic link.');
+      await signInWithUsername(form.username, form.password);
+    } catch {
+      setError('That username and password did not work.');
+    }
+  }
+
+  async function setupAdmin() {
+    setBootstrapping(true);
+    setError('');
+    setMessage('');
+    try {
+      const result = await bootstrapAdmin();
+      setMessage(result.created ? 'Admin account created. Sign in with admin / LDBBadmin1007~.' : 'Admin account already exists. Sign in with admin / LDBBadmin1007~.');
+      setRole('admin');
+      setForm({ username: 'admin', password: '' });
     } catch (err) {
       setError(err.message);
+    } finally {
+      setBootstrapping(false);
     }
   }
 
@@ -27,14 +50,45 @@ export default function LoginPage() {
     <main className="auth-screen">
       <section className="auth-card">
         <div className="brand big"><span className="brand-mark">CB</span><strong>Class Card Battles</strong></div>
-        <h1>Classroom card battles from student art</h1>
-        <form onSubmit={handleSubmit}>
+        <h1>{roleLabels[role]} login</h1>
+
+        <div className="segmented login-tabs">
+          {Object.keys(roleLabels).map((key) => (
+            <button key={key} className={role === key ? 'active' : ''} onClick={() => setRole(key)}>
+              {roleLabels[key]}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={handleLogin}>
           <label>
-            Email
-            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+            Username
+            <input
+              value={form.username}
+              onChange={(event) => setForm({ ...form, username: event.target.value })}
+              autoComplete="username"
+              required
+            />
           </label>
-          <button className="primary-button" type="submit">Send magic link</button>
+          <label>
+            Password
+            <input
+              type="password"
+              value={form.password}
+              onChange={(event) => setForm({ ...form, password: event.target.value })}
+              autoComplete="current-password"
+              required
+            />
+          </label>
+          <button className="primary-button" type="submit">Sign in</button>
         </form>
+
+        {role === 'admin' && (
+          <button className="ghost-button full-width" type="button" onClick={setupAdmin} disabled={bootstrapping}>
+            {bootstrapping ? 'Setting up admin...' : 'Set up first admin'}
+          </button>
+        )}
+
         {message && <p className="success">{message}</p>}
         {error && <p className="error">{error}</p>}
       </section>

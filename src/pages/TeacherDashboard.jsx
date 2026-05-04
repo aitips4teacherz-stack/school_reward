@@ -1,41 +1,97 @@
 import { useEffect, useMemo, useState } from 'react';
 import CardCreator from '../components/CardCreator.jsx';
-import { giveCoins, listClassStudents, listDrawings, updateStudent } from '../lib/api';
+import { accountAction, getMyClass, giveCoins, listClassStudents, listDrawings } from '../lib/api';
 import { useAuth } from '../lib/AuthContext.jsx';
 
 export default function TeacherDashboard() {
   const { profile } = useAuth();
   const [students, setStudents] = useState([]);
   const [drawings, setDrawings] = useState([]);
+  const [classroom, setClassroom] = useState(null);
+  const [studentForm, setStudentForm] = useState({ name: '', username: '', password: '', avatar: 'Astra' });
+  const [editing, setEditing] = useState(null);
   const [selectedDrawingId, setSelectedDrawingId] = useState('');
+  const [notice, setNotice] = useState('');
+  const [error, setError] = useState('');
   const selectedDrawing = useMemo(
     () => drawings.find((drawing) => drawing.id === selectedDrawingId),
     [drawings, selectedDrawingId],
   );
 
   useEffect(() => {
-    async function load() {
-      const [studentRows, drawingRows] = await Promise.all([listClassStudents(), listDrawings()]);
-      setStudents(studentRows);
-      setDrawings(drawingRows);
-      setSelectedDrawingId(drawingRows[0]?.id ?? '');
-    }
-    load();
+    refreshAll();
   }, []);
 
   if (!['teacher', 'admin'].includes(profile?.role)) {
     return <div className="empty-state">Teacher access is required.</div>;
   }
 
-  async function resetPin(student) {
-    const nextPin = Math.floor(1000 + Math.random() * 9000).toString();
-    const updated = await updateStudent(student.id, { pin: nextPin });
-    setStudents((rows) => rows.map((row) => (row.id === student.id ? { ...row, ...updated } : row)));
+  async function refreshAll() {
+    const [studentRows, drawingRows, classRow] = await Promise.all([
+      listClassStudents(),
+      listDrawings(),
+      getMyClass(profile.class_id),
+    ]);
+    setStudents(studentRows);
+    setDrawings(drawingRows);
+    setClassroom(classRow);
+    setSelectedDrawingId((current) => current || drawingRows[0]?.id || '');
   }
 
-  async function toggleLocked(student) {
-    const updated = await updateStudent(student.id, { locked: !student.locked });
-    setStudents((rows) => rows.map((row) => (row.id === student.id ? { ...row, ...updated } : row)));
+  async function createStudent(event) {
+    event.preventDefault();
+    setNotice('');
+    setError('');
+    try {
+      const result = await accountAction('create-student', studentForm);
+      setNotice(`Student created. Username: ${result.username}. Password: ${result.pin}`);
+      setStudentForm({ name: '', username: '', password: '', avatar: 'Astra' });
+      await refreshAll();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function saveStudent(student) {
+    setNotice('');
+    setError('');
+    try {
+      await accountAction('update-student', {
+        studentId: student.id,
+        name: editing.name,
+        avatar: editing.avatar,
+        locked: editing.locked,
+      });
+      setEditing(null);
+      setNotice(`${editing.name} was updated.`);
+      await refreshAll();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function resetPin(student) {
+    setNotice('');
+    setError('');
+    try {
+      const result = await accountAction('reset-student-pin', { studentId: student.id });
+      setNotice(`${student.name}'s new password: ${result.pin}`);
+      await refreshAll();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function deleteStudent(student) {
+    setNotice('');
+    setError('');
+    try {
+      await accountAction('delete-student', { studentId: student.id });
+      setNotice(`${student.name} was deleted.`);
+      await refreshAll();
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   async function awardCoins(student, amount) {
@@ -53,22 +109,80 @@ export default function TeacherDashboard() {
           <p className="eyebrow">Teacher Dashboard</p>
           <h1>Manage students and cards</h1>
         </div>
+        <div className="metric-row">
+          <span>Class code <b>{classroom?.code ?? 'unset'}</b></span>
+        </div>
       </header>
+
+      <section className="panel">
+        <h2>Create student</h2>
+        <form className="account-form" onSubmit={createStudent}>
+          <label>
+            Student name
+            <input value={studentForm.name} onChange={(event) => setStudentForm({ ...studentForm, name: event.target.value })} required />
+          </label>
+          <label>
+            Student username
+            <input value={studentForm.username} onChange={(event) => setStudentForm({ ...studentForm, username: event.target.value })} required />
+          </label>
+          <label>
+            6 digit password
+            <input
+              inputMode="numeric"
+              pattern="[0-9]{6}"
+              value={studentForm.password}
+              onChange={(event) => setStudentForm({ ...studentForm, password: event.target.value.replace(/\D/g, '').slice(0, 6) })}
+              placeholder="Auto-generate if blank"
+            />
+          </label>
+          <label>
+            Avatar
+            <input value={studentForm.avatar} onChange={(event) => setStudentForm({ ...studentForm, avatar: event.target.value })} />
+          </label>
+          <button className="primary-button" type="submit">Create student</button>
+        </form>
+        {notice && <p className="success">{notice}</p>}
+        {error && <p className="error">{error}</p>}
+      </section>
 
       <section className="table-panel">
         <h2>Students</h2>
         {students.map((student) => {
           const stats = student.game_stats?.[0] ?? {};
+          const isEditing = editing?.id === student.id;
           return (
             <div className="student-row" key={student.id}>
               <div>
-                <strong>{student.name}</strong>
-                <span>{stats.coins ?? 0} coins · {stats.wins ?? 0} wins · PIN {student.pin ?? 'unset'}</span>
+                {isEditing ? (
+                  <div className="inline-edit">
+                    <input value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} />
+                    <input value={editing.avatar ?? ''} onChange={(event) => setEditing({ ...editing, avatar: event.target.value })} />
+                    <label className="check-row">
+                      <input type="checkbox" checked={editing.locked} onChange={(event) => setEditing({ ...editing, locked: event.target.checked })} />
+                      Locked
+                    </label>
+                  </div>
+                ) : (
+                  <>
+                    <strong>{student.name}</strong>
+                    <span>Username {student.username ?? 'unset'} · {stats.coins ?? 0} coins · {stats.wins ?? 0} wins · Password {student.pin ?? 'unset'} · {student.locked ? 'locked' : 'active'}</span>
+                  </>
+                )}
               </div>
               <div className="row-actions">
-                <button onClick={() => resetPin(student)}>Reset PIN</button>
-                <button onClick={() => awardCoins(student, 10)}>+10 coins</button>
-                <button onClick={() => toggleLocked(student)}>{student.locked ? 'Unlock' : 'Lock'}</button>
+                {isEditing ? (
+                  <>
+                    <button onClick={() => saveStudent(student)}>Save</button>
+                    <button onClick={() => setEditing(null)}>Cancel</button>
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => setEditing({ id: student.id, name: student.name, avatar: student.avatar, locked: student.locked })}>Edit</button>
+                    <button onClick={() => resetPin(student)}>Reset password</button>
+                    <button onClick={() => awardCoins(student, 10)}>+10 coins</button>
+                    <button onClick={() => deleteStudent(student)}>Delete</button>
+                  </>
+                )}
               </div>
             </div>
           );
@@ -79,7 +193,7 @@ export default function TeacherDashboard() {
         <div className="section-heading">
           <div>
             <h2>Create card from drawing</h2>
-            <p className="muted">Crop the art, choose rarity and color, then generated stats are saved with the card.</p>
+            <p className="muted">Crop the art, choose rarity and color, then generated stats are saved to that student's account.</p>
           </div>
           <select value={selectedDrawingId} onChange={(event) => setSelectedDrawingId(event.target.value)}>
             {drawings.map((drawing) => (
@@ -89,7 +203,7 @@ export default function TeacherDashboard() {
             ))}
           </select>
         </div>
-        <CardCreator drawing={selectedDrawing} />
+        <CardCreator drawing={selectedDrawing} onCreated={refreshAll} />
       </section>
     </section>
   );

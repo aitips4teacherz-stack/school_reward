@@ -1,13 +1,30 @@
 import { supabase } from './supabase';
 
-export async function signInWithMagicLink(email) {
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: window.location.origin,
-    },
-  });
+export async function signInWithPassword(email, password) {
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
+}
+
+export async function signInWithUsername(username, password) {
+  const email = usernameToAuthEmail(username);
+  return signInWithPassword(email, password);
+}
+
+export async function bootstrapAdmin() {
+  const response = await fetch('/.netlify/functions/admin-users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'bootstrap-admin' }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'Could not set up admin.');
+  return data;
+}
+
+export async function listClassLoginStudents(classCode) {
+  const { data, error } = await supabase.rpc('class_login_students', { class_code: classCode });
+  if (error) throw error;
+  return data ?? [];
 }
 
 export async function upsertProfile(profile) {
@@ -97,6 +114,23 @@ export async function listClassStudents() {
   return data ?? [];
 }
 
+export async function listTeachers() {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*, classes!classes_teacher_id_fkey(*)')
+    .eq('role', 'teacher')
+    .order('name');
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getMyClass(classId) {
+  if (!classId) return null;
+  const { data, error } = await supabase.from('classes').select('*').eq('id', classId).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 export async function updateStudent(id, patch) {
   const { data, error } = await supabase.from('profiles').update(patch).eq('id', id).select().single();
   if (error) throw error;
@@ -117,6 +151,29 @@ export async function giveCoins(userId, currentCoins, amount) {
 export async function applyBattleResult(result) {
   const { error } = await supabase.rpc('apply_battle_result', { result });
   if (error) throw error;
+}
+
+export async function accountAction(action, payload) {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error('You must be signed in.');
+
+  const response = await fetch('/.netlify/functions/admin-users', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ action, ...payload }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || 'Account action failed.');
+  return data;
+}
+
+export function usernameToAuthEmail(username) {
+  const cleanUsername = String(username || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
+  return `${cleanUsername}@classcard.app`;
 }
 
 async function withSignedImages(rows, bucket) {

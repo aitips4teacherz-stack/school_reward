@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout.jsx';
+import HomeRedirect from './components/HomeRedirect.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import AdminDashboard from './pages/AdminDashboard.jsx';
 import BattlePage from './pages/BattlePage.jsx';
 import DeckBuilderPage from './pages/DeckBuilderPage.jsx';
 import LeaderboardPage from './pages/LeaderboardPage.jsx';
@@ -16,7 +18,8 @@ export default function App() {
       <Route path="/onboarding" element={<OnboardingPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
-          <Route path="/" element={<Navigate to="/student" replace />} />
+          <Route path="/" element={<HomeRedirect />} />
+          <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/student" element={<StudentDashboard />} />
           <Route path="/teacher" element={<TeacherDashboard />} />
           <Route path="/deck" element={<DeckBuilderPage />} />
