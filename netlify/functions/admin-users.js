@@ -48,12 +48,25 @@ async function bootstrapAdmin() {
   const password = 'LDBBadmin1007~';
   const email = usernameToAuthEmail(username);
 
-  const { count, error: countError } = await adminClient
+  const { data: existingProfile, error: profileLookupError } = await adminClient
     .from('profiles')
-    .select('id', { count: 'exact', head: true })
-    .eq('role', 'admin');
-  if (countError) throw countError;
-  if (count && count > 0) return json(200, { created: false });
+    .select('*')
+    .eq('username', username)
+    .maybeSingle();
+  if (profileLookupError) throw profileLookupError;
+
+  if (existingProfile) {
+    const { error: passwordError } = await adminClient.auth.admin.updateUserById(existingProfile.id, { password });
+    if (passwordError) throw passwordError;
+    const { error: repairError } = await adminClient.from('profiles').update({
+      name: 'Admin',
+      role: 'admin',
+      login_email: email,
+      locked: false,
+    }).eq('id', existingProfile.id);
+    if (repairError) throw repairError;
+    return json(200, { created: false, repaired: true });
+  }
 
   const { data: userData, error: userError } = await adminClient.auth.admin.createUser({
     email,
@@ -69,6 +82,9 @@ async function bootstrapAdmin() {
     userId = existing?.id;
   }
   if (!userId) throw new Error('Could not create or find admin auth user.');
+
+  const { error: passwordRepairError } = await adminClient.auth.admin.updateUserById(userId, { password });
+  if (passwordRepairError) throw passwordRepairError;
 
   const { error: profileError } = await adminClient.from('profiles').upsert({
     id: userId,

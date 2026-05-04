@@ -26,6 +26,16 @@ export default function LoginPage() {
     try {
       await signInWithUsername(form.username, form.password);
     } catch {
+      if (role === 'admin' && form.username.trim().toLowerCase() === 'admin') {
+        try {
+          await bootstrapAdmin();
+          await signInWithUsername(form.username, form.password);
+          return;
+        } catch {
+          setError('Admin setup could not complete. Check Netlify has SUPABASE_SERVICE_ROLE_KEY set, then redeploy.');
+          return;
+        }
+      }
       setError('That username and password did not work.');
     }
   }
