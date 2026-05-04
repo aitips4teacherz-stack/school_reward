@@ -1,18 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import Cropper from 'cropperjs';
+import ArenaCardFace from './ArenaCardFace.jsx';
 import { createCard, uploadImage } from '../lib/api';
 import { dataUrlToBlob } from '../utils/files';
 import { generateStats } from '../utils/stats';
 
 const colors = ['Red', 'Blue', 'Green'];
 const rarities = ['Common', 'Rare', 'Epic', 'Legendary'];
-const glyphs = ['𓂀', '𓆣', '𓃭', '𓊹', '𓇳', '𓁹', '𓋹', '𓅓'];
 
 export default function CardCreator({ drawing, onCreated }) {
   const imageRef = useRef(null);
   const cropperRef = useRef(null);
   const [form, setForm] = useState({ name: '', color: 'Red', rarity: 'Common' });
   const stats = generateStats(form);
+  const previewCard = { ...form, ...stats };
 
   useEffect(() => {
     if (!imageRef.current || !drawing) return undefined;
@@ -63,23 +64,7 @@ export default function CardCreator({ drawing, onCreated }) {
       </div>
 
       <div className="arena-card-preview-wrap">
-        <div className={`arena-card-preview ${form.rarity.toLowerCase()} ${form.color.toLowerCase()}`}>
-          <div className="glyph-rail top">{glyphs.map((glyph) => <span key={`top-${glyph}`}>{glyph}</span>)}</div>
-          <div className="card-orb">VS</div>
-          <div className="preview-art-frame">
-            <img src={drawing.image_url} alt="Card preview art" />
-          </div>
-          <div className="preview-card-body">
-            <p>{form.rarity} {form.color}</p>
-            <h3>{form.name || 'Unnamed Champion'}</h3>
-            <div className="sigil-stats">
-              <span><b>⚔</b>{stats.attack}</span>
-              <span><b>⬟</b>{stats.defense}</span>
-              <span><b>ϟ</b>{stats.speed}</span>
-            </div>
-          </div>
-          <div className="glyph-rail bottom">{glyphs.slice().reverse().map((glyph) => <span key={`bottom-${glyph}`}>{glyph}</span>)}</div>
-        </div>
+        <ArenaCardFace card={previewCard} imageUrl={drawing.image_url} />
       </div>
 
       <div className="forge-controls">
