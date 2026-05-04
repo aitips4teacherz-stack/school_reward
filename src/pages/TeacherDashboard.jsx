@@ -5,6 +5,7 @@ import { useAuth } from '../lib/AuthContext.jsx';
 
 export default function TeacherDashboard() {
   const { profile } = useAuth();
+  const [activeMenu, setActiveMenu] = useState('class');
   const [students, setStudents] = useState([]);
   const [drawings, setDrawings] = useState([]);
   const [classroom, setClassroom] = useState(null);
@@ -107,104 +108,120 @@ export default function TeacherDashboard() {
       <header className="page-header">
         <div>
           <p className="eyebrow">Teacher Dashboard</p>
-          <h1>Manage students and cards</h1>
+          <h1>{activeMenu === 'class' ? 'Class setup' : 'Card maker'}</h1>
         </div>
         <div className="metric-row">
           <span>Class code <b>{classroom?.code ?? 'unset'}</b></span>
         </div>
       </header>
 
-      <section className="panel">
-        <h2>Create student</h2>
-        <form className="account-form" onSubmit={createStudent}>
-          <label>
-            Student name
-            <input value={studentForm.name} onChange={(event) => setStudentForm({ ...studentForm, name: event.target.value })} required />
-          </label>
-          <label>
-            Student username
-            <input value={studentForm.username} onChange={(event) => setStudentForm({ ...studentForm, username: event.target.value })} required />
-          </label>
-          <label>
-            6 digit password
-            <input
-              inputMode="numeric"
-              pattern="[0-9]{6}"
-              value={studentForm.password}
-              onChange={(event) => setStudentForm({ ...studentForm, password: event.target.value.replace(/\D/g, '').slice(0, 6) })}
-              placeholder="Auto-generate if blank"
-            />
-          </label>
-          <label>
-            Avatar
-            <input value={studentForm.avatar} onChange={(event) => setStudentForm({ ...studentForm, avatar: event.target.value })} />
-          </label>
-          <button className="primary-button" type="submit">Create student</button>
-        </form>
-        {notice && <p className="success">{notice}</p>}
-        {error && <p className="error">{error}</p>}
-      </section>
+      <div className="teacher-menu">
+        <button className={activeMenu === 'class' ? 'active' : ''} onClick={() => setActiveMenu('class')}>Class setup</button>
+        <button className={activeMenu === 'cards' ? 'active' : ''} onClick={() => setActiveMenu('cards')}>Card maker</button>
+      </div>
 
-      <section className="table-panel">
-        <h2>Students</h2>
-        {students.map((student) => {
-          const stats = student.game_stats?.[0] ?? {};
-          const isEditing = editing?.id === student.id;
-          return (
-            <div className="student-row" key={student.id}>
+      {activeMenu === 'class' && (
+        <>
+          <section className="panel">
+            <div className="section-heading">
               <div>
-                {isEditing ? (
-                  <div className="inline-edit">
-                    <input value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} />
-                    <input value={editing.avatar ?? ''} onChange={(event) => setEditing({ ...editing, avatar: event.target.value })} />
-                    <label className="check-row">
-                      <input type="checkbox" checked={editing.locked} onChange={(event) => setEditing({ ...editing, locked: event.target.checked })} />
-                      Locked
-                    </label>
-                  </div>
-                ) : (
-                  <>
-                    <strong>{student.name}</strong>
-                    <span>Username {student.username ?? 'unset'} · {stats.coins ?? 0} coins · {stats.wins ?? 0} wins · Password {student.pin ?? 'unset'} · {student.locked ? 'locked' : 'active'}</span>
-                  </>
-                )}
-              </div>
-              <div className="row-actions">
-                {isEditing ? (
-                  <>
-                    <button onClick={() => saveStudent(student)}>Save</button>
-                    <button onClick={() => setEditing(null)}>Cancel</button>
-                  </>
-                ) : (
-                  <>
-                    <button onClick={() => setEditing({ id: student.id, name: student.name, avatar: student.avatar, locked: student.locked })}>Edit</button>
-                    <button onClick={() => resetPin(student)}>Reset password</button>
-                    <button onClick={() => awardCoins(student, 10)}>+10 coins</button>
-                    <button onClick={() => deleteStudent(student)}>Delete</button>
-                  </>
-                )}
+                <h2>Class setup</h2>
+                <p className="muted">Create student logins, manage accounts, reset passwords, and maintain your classroom roster.</p>
               </div>
             </div>
-          );
-        })}
-      </section>
+            <form className="account-form" onSubmit={createStudent}>
+              <label>
+                Student name
+                <input value={studentForm.name} onChange={(event) => setStudentForm({ ...studentForm, name: event.target.value })} required />
+              </label>
+              <label>
+                Student username
+                <input value={studentForm.username} onChange={(event) => setStudentForm({ ...studentForm, username: event.target.value })} required />
+              </label>
+              <label>
+                6 digit password
+                <input
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  value={studentForm.password}
+                  onChange={(event) => setStudentForm({ ...studentForm, password: event.target.value.replace(/\D/g, '').slice(0, 6) })}
+                  placeholder="Auto-generate if blank"
+                />
+              </label>
+              <label>
+                Avatar
+                <input value={studentForm.avatar} onChange={(event) => setStudentForm({ ...studentForm, avatar: event.target.value })} />
+              </label>
+              <button className="primary-button" type="submit">Create student</button>
+            </form>
+            {notice && <p className="success">{notice}</p>}
+            {error && <p className="error">{error}</p>}
+          </section>
 
-      <section className="panel">
-        <div className="section-heading">
-          <div>
-            <h2>Create card from drawing</h2>
-            <p className="muted">Crop the art, choose rarity and color, then generated stats are saved to that student's account.</p>
+          <section className="table-panel">
+            <h2>Students</h2>
+            {students.map((student) => {
+              const stats = student.game_stats?.[0] ?? {};
+              const isEditing = editing?.id === student.id;
+              return (
+                <div className="student-row" key={student.id}>
+                  <div>
+                    {isEditing ? (
+                      <div className="inline-edit">
+                        <input value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} />
+                        <input value={editing.avatar ?? ''} onChange={(event) => setEditing({ ...editing, avatar: event.target.value })} />
+                        <label className="check-row">
+                          <input type="checkbox" checked={editing.locked} onChange={(event) => setEditing({ ...editing, locked: event.target.checked })} />
+                          Locked
+                        </label>
+                      </div>
+                    ) : (
+                      <>
+                        <strong>{student.name}</strong>
+                        <span>Username {student.username ?? 'unset'} · {stats.coins ?? 0} coins · {stats.wins ?? 0} wins · Password {student.pin ?? 'unset'} · {student.locked ? 'locked' : 'active'}</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="row-actions">
+                    {isEditing ? (
+                      <>
+                        <button onClick={() => saveStudent(student)}>Save</button>
+                        <button onClick={() => setEditing(null)}>Cancel</button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => setEditing({ id: student.id, name: student.name, avatar: student.avatar, locked: student.locked })}>Edit</button>
+                        <button onClick={() => resetPin(student)}>Reset password</button>
+                        <button onClick={() => awardCoins(student, 10)}>+10 coins</button>
+                        <button onClick={() => deleteStudent(student)}>Delete</button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+        </>
+      )}
+
+      {activeMenu === 'cards' && (
+        <section className="arena-maker-panel">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Ancient Card Forge</p>
+              <h2>Create card from drawing</h2>
+            </div>
+            <select value={selectedDrawingId} onChange={(event) => setSelectedDrawingId(event.target.value)}>
+              {drawings.map((drawing) => (
+                <option key={drawing.id} value={drawing.id}>
+                  {drawing.profiles?.name ?? 'Student'} · {new Date(drawing.created_at).toLocaleDateString()}
+                </option>
+              ))}
+            </select>
           </div>
-          <select value={selectedDrawingId} onChange={(event) => setSelectedDrawingId(event.target.value)}>
-            {drawings.map((drawing) => (
-              <option key={drawing.id} value={drawing.id}>
-                {drawing.profiles?.name ?? 'Student'} · {new Date(drawing.created_at).toLocaleDateString()}
-              </option>
-            ))}
-          </select>
-        </div>
-        <CardCreator drawing={selectedDrawing} onCreated={refreshAll} />
-      </section>
+          <CardCreator drawing={selectedDrawing} onCreated={refreshAll} />
+        </section>
+      )}
     </section>
   );
 }
