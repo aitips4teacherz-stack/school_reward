@@ -18,7 +18,17 @@ export default function ProtectedRoute() {
     );
   }
   if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
-  if (!profile && location.pathname !== '/onboarding') return <Navigate to="/onboarding" replace />;
+  if (!profile) {
+    return (
+      <div className="center-screen error-screen">
+        <div>
+          <h1>No classroom profile</h1>
+          <p>This login does not have an admin, teacher, or student profile yet.</p>
+          <button className="primary-button" onClick={signOut}>Back to login</button>
+        </div>
+      </div>
+    );
+  }
   if (profile?.locked) return <div className="center-screen">This account is locked. Ask your teacher for help.</div>;
 
   return <Outlet />;
