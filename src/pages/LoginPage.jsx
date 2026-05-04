@@ -10,14 +10,26 @@ const roleLabels = {
 };
 
 export default function LoginPage() {
-  const { user } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
   const [role, setRole] = useState('student');
   const [form, setForm] = useState({ username: '', password: '' });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [bootstrapping, setBootstrapping] = useState(false);
 
-  if (user) return <Navigate to="/" replace />;
+  if (loading) return <div className="center-screen">Loading classroom...</div>;
+  if (user && profile) return <Navigate to="/" replace />;
+  if (user && !profile) {
+    return (
+      <main className="auth-screen">
+        <section className="auth-card">
+          <h1>Session needs reset</h1>
+          <p className="muted">This browser is signed into an account without a classroom profile.</p>
+          <button className="primary-button" onClick={signOut}>Back to login</button>
+        </section>
+      </main>
+    );
+  }
 
   async function handleLogin(event) {
     event.preventDefault();
