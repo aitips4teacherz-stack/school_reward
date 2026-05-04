@@ -11,10 +11,20 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let mounted = true;
+    const loadingTimer = window.setTimeout(() => {
+      if (mounted) {
+        setAuthError('The classroom session took too long to load. Sign in again, or check your Supabase environment variables in Netlify.');
+        setLoading(false);
+      }
+    }, 8000);
 
     async function load() {
       try {
-        const { data, error } = await supabase.auth.getSession();
+        const { data, error } = await withTimeout(
+          supabase.auth.getSession(),
+          6000,
+          'Supabase session check timed out.',
+        );
         if (error) throw error;
         if (!mounted) return;
         setSession(data.session);
@@ -28,6 +38,7 @@ export function AuthProvider({ children }) {
         }
       } finally {
         if (mounted) setLoading(false);
+        window.clearTimeout(loadingTimer);
       }
     }
 
@@ -52,13 +63,18 @@ export function AuthProvider({ children }) {
 
     return () => {
       mounted = false;
+      window.clearTimeout(loadingTimer);
       listener.subscription.unsubscribe();
     };
   }, []);
 
   async function loadProfile(userId = session?.user?.id) {
     if (!userId) return null;
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+    const { data, error } = await withTimeout(
+      supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
+      6000,
+      'Supabase profile lookup timed out.',
+    );
     if (error) throw error;
     setProfile(data);
     return data;
@@ -84,4 +100,13 @@ export function useAuth() {
     throw new Error('useAuth must be used inside AuthProvider');
   }
   return context;
+}
+
+function withTimeout(promise, ms, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      window.setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]);
 }
