@@ -7,30 +7,47 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState('');
 
   useEffect(() => {
     let mounted = true;
 
     async function load() {
-      const { data } = await supabase.auth.getSession();
-      if (!mounted) return;
-      setSession(data.session);
-      if (data.session?.user) {
-        await loadProfile(data.session.user.id);
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        if (!mounted) return;
+        setSession(data.session);
+        if (data.session?.user) {
+          await loadProfile(data.session.user.id);
+        }
+      } catch (error) {
+        if (mounted) {
+          setAuthError(error.message || 'Could not load your classroom session.');
+          setProfile(null);
+        }
+      } finally {
+        if (mounted) setLoading(false);
       }
-      setLoading(false);
     }
 
     load();
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
-      setSession(nextSession);
-      if (nextSession?.user) {
-        await loadProfile(nextSession.user.id);
-      } else {
+      try {
+        setAuthError('');
+        setSession(nextSession);
+        if (nextSession?.user) {
+          await loadProfile(nextSession.user.id);
+        } else {
+          setProfile(null);
+        }
+      } catch (error) {
+        setAuthError(error.message || 'Could not load your classroom profile.');
         setProfile(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => {
@@ -50,11 +67,12 @@ export function AuthProvider({ children }) {
   async function signOut() {
     await supabase.auth.signOut();
     setProfile(null);
+    setAuthError('');
   }
 
   const value = useMemo(
-    () => ({ session, user: session?.user ?? null, profile, loading, loadProfile, signOut }),
-    [session, profile, loading],
+    () => ({ session, user: session?.user ?? null, profile, loading, authError, loadProfile, signOut }),
+    [session, profile, loading, authError],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

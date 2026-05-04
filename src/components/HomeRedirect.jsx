@@ -6,5 +6,6 @@ export default function HomeRedirect() {
 
   if (profile?.role === 'admin') return <Navigate to="/admin" replace />;
   if (profile?.role === 'teacher') return <Navigate to="/teacher" replace />;
-  return <Navigate to="/student" replace />;
+  if (profile?.role === 'student') return <Navigate to="/student" replace />;
+  return <Navigate to="/onboarding" replace />;
 }
