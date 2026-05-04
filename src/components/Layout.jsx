@@ -21,11 +21,15 @@ export default function Layout() {
           </div>
         </div>
         <nav>
-          <NavLink to="/student">Cards</NavLink>
-          <NavLink to="/deck">Deck</NavLink>
-          <NavLink to="/battle">Battle</NavLink>
-          <NavLink to="/leaderboard">Leaderboard</NavLink>
-          {['teacher', 'admin'].includes(profile?.role) && <NavLink to="/teacher">Teacher</NavLink>}
+          {profile?.role === 'student' && (
+            <>
+              <NavLink to="/student">Cards</NavLink>
+              <NavLink to="/deck">Deck</NavLink>
+              <NavLink to="/battle">Battle</NavLink>
+              <NavLink to="/leaderboard">Leaderboard</NavLink>
+            </>
+          )}
+          {profile?.role === 'teacher' && <NavLink to="/teacher">Teacher</NavLink>}
           {profile?.role === 'admin' && <NavLink to="/admin">Admin</NavLink>}
         </nav>
         <button className="ghost-button" onClick={handleSignOut}>Sign out</button>

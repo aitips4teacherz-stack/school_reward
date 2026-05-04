@@ -6,6 +6,7 @@ import { generateStats } from '../utils/stats';
 
 const colors = ['Red', 'Blue', 'Green'];
 const rarities = ['Common', 'Rare', 'Epic', 'Legendary'];
+const glyphs = ['𓂀', '𓆣', '𓃭', '𓊹', '𓇳', '𓁹', '𓋹', '𓅓'];
 
 export default function CardCreator({ drawing, onCreated }) {
   const imageRef = useRef(null);
@@ -49,33 +50,68 @@ export default function CardCreator({ drawing, onCreated }) {
   if (!drawing) return <div className="empty-state">Select a drawing to create a card.</div>;
 
   return (
-    <form className="creator-grid" onSubmit={handleSubmit}>
-      <div className="crop-panel">
-        <img ref={imageRef} src={drawing.image_url} alt="Selected student drawing" crossOrigin="anonymous" />
+    <form className="arena-creator-grid" onSubmit={handleSubmit}>
+      <div className="forge-workbench">
+        <div className="forge-title">
+          <span>𓊹</span>
+          <strong>Crop the relic art</strong>
+          <span>𓊹</span>
+        </div>
+        <div className="crop-panel arena-crop-panel">
+          <img ref={imageRef} src={drawing.image_url} alt="Selected student drawing" crossOrigin="anonymous" />
+        </div>
       </div>
-      <div className="form-panel">
+
+      <div className="arena-card-preview-wrap">
+        <div className={`arena-card-preview ${form.rarity.toLowerCase()} ${form.color.toLowerCase()}`}>
+          <div className="glyph-rail top">{glyphs.map((glyph) => <span key={`top-${glyph}`}>{glyph}</span>)}</div>
+          <div className="card-orb">VS</div>
+          <div className="preview-art-frame">
+            <img src={drawing.image_url} alt="Card preview art" />
+          </div>
+          <div className="preview-card-body">
+            <p>{form.rarity} {form.color}</p>
+            <h3>{form.name || 'Unnamed Champion'}</h3>
+            <div className="sigil-stats">
+              <span><b>⚔</b>{stats.attack}</span>
+              <span><b>⬟</b>{stats.defense}</span>
+              <span><b>ϟ</b>{stats.speed}</span>
+            </div>
+          </div>
+          <div className="glyph-rail bottom">{glyphs.slice().reverse().map((glyph) => <span key={`bottom-${glyph}`}>{glyph}</span>)}</div>
+        </div>
+      </div>
+
+      <div className="forge-controls">
+        <div className="forge-control-header">
+          <span>𓇳</span>
+          <strong>Card maker</strong>
+          <span>𓇳</span>
+        </div>
         <label>
           Card name
           <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
         </label>
-        <label>
-          Color
-          <select value={form.color} onChange={(event) => setForm({ ...form, color: event.target.value })}>
-            {colors.map((color) => <option key={color}>{color}</option>)}
-          </select>
-        </label>
-        <label>
-          Rarity
-          <select value={form.rarity} onChange={(event) => setForm({ ...form, rarity: event.target.value })}>
-            {rarities.map((rarity) => <option key={rarity}>{rarity}</option>)}
-          </select>
-        </label>
-        <div className="preview-stats">
+        <div className="forge-field-row">
+          <label>
+            Color
+            <select value={form.color} onChange={(event) => setForm({ ...form, color: event.target.value })}>
+              {colors.map((color) => <option key={color}>{color}</option>)}
+            </select>
+          </label>
+          <label>
+            Rarity
+            <select value={form.rarity} onChange={(event) => setForm({ ...form, rarity: event.target.value })}>
+              {rarities.map((rarity) => <option key={rarity}>{rarity}</option>)}
+            </select>
+          </label>
+        </div>
+        <div className="preview-stats arena-stats">
           <span>Attack <b>{stats.attack}</b></span>
           <span>Defense <b>{stats.defense}</b></span>
           <span>Speed <b>{stats.speed}</b></span>
         </div>
-        <button className="primary-button" type="submit">Create card</button>
+        <button className="primary-button forge-button" type="submit">Create card</button>
       </div>
     </form>
   );
