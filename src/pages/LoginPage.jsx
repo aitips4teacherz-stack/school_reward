@@ -24,6 +24,9 @@ export default function LoginPage() {
     setError('');
     setMessage('');
     try {
+      if (role === 'admin' && form.username.trim().toLowerCase() === 'admin') {
+        await bootstrapAdmin();
+      }
       await signInWithUsername(form.username, form.password);
     } catch {
       if (role === 'admin' && form.username.trim().toLowerCase() === 'admin') {
